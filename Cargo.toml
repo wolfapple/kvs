@@ -1,0 +1,8 @@
+[package]
+name = "kvs"
+version = "0.1.0"
+authors = ["Barney Kim <9wolfapple@gmail.com>"]
+description = "A key-value store"
+edition = "2024"
+
+[dependencies]
