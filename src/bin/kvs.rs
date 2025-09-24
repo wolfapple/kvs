@@ -18,15 +18,15 @@ enum Commands {
 fn main() {
     let args = Args::parse();
     match args.cmd {
-        Commands::Set { key, value } => {
+        Commands::Set { key: _, value: _ } => {
             eprintln!("unimplemented");
             exit(1);
         }
-        Commands::Get { key } => {
+        Commands::Get { key: _ } => {
             eprintln!("unimplemented");
             exit(1);
         }
-        Commands::Rm { key } => {
+        Commands::Rm { key: _ } => {
             eprintln!("unimplemented");
             exit(1);
         }
