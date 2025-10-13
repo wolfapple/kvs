@@ -1,5 +1,6 @@
 use std::process::exit;
 use clap::{Parser, Subcommand};
+use kvs::Result;
 
 #[derive(Debug, Parser)]
 #[clap(version)]
@@ -15,7 +16,7 @@ enum Commands {
     Rm { key: String },
 }
 
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
     match args.cmd {
         Commands::Set { key: _, value: _ } => {
