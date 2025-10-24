@@ -1,19 +1,22 @@
+use std::io;
+
 #[derive(Debug)]
 pub enum KvsError {
-    Io(std::io::Error),
+    Io(io::Error),
     Serde(serde_json::Error),
     KeyNotFound,
+    UnexpectedCommandType,
 }
 
-impl From<std::io::Error> for KvsError {
-    fn from(e: std::io::Error) -> Self {
-        KvsError::Io(e)
+impl From<io::Error> for KvsError {
+    fn from(err: io::Error) -> Self {
+        KvsError::Io(err)
     }
 }
 
 impl From<serde_json::Error> for KvsError {
-    fn from(e: serde_json::Error) -> Self {
-        KvsError::Serde(e)
+    fn from(err: serde_json::Error) -> Self {
+        KvsError::Serde(err)
     }
 }
 
