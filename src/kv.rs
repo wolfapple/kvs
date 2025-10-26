@@ -5,6 +5,8 @@ use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
+const COMPACTION_THRESHOLD: u64 = 1024 * 1024; // 1MB
+
 /// The `KvStore` stores string key/value pairs.
 ///
 /// Key/value pairs are persisted to a log file on disk.
@@ -15,17 +17,22 @@ use std::path::PathBuf;
 ///
 /// ```rust
 /// use std::env::current_dir;
-/// use kvs::KvStore;
+/// use kvs::{KvStore, Result};
 ///
-/// let mut store = KvStore::open(current_dir()?)?;
-/// store.set("key".to_owned(), "value".to_owned())?;
-/// let val = store.get("key".to_owned())?;
-/// assert_eq!(val, Some("value".to_owned()));
+/// fn main() -> Result<()> {
+///     let mut store = KvStore::open(current_dir()?)?;
+///     store.set("key".to_owned(), "value".to_owned())?;
+///     let val = store.get("key".to_owned())?;
+///     assert_eq!(val, Some("value".to_owned()));
+///     Ok(())
+/// }
 /// ```
 pub struct KvStore {
+    path: PathBuf,
     writer: BufWriter<File>,
     reader: BufReader<File>,
     index: HashMap<String, CommandPos>,
+    stale_bytes: u64,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -41,47 +48,56 @@ impl KvStore {
     /// It will also create a `wal.log` file if it does not exist.
     /// The index will be built from the log file.
     pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
-        let mut path = path.into();
+        let path = path.into();
         std::fs::create_dir_all(&path)?;
-        path.push("wal.log");
+        let log_path = path.join("wal.log");
 
         let writer_file = OpenOptions::new()
             .write(true)
             .create(true)
-            .open(&path)?;
-        let reader_file = File::open(&path)?;
+            .open(&log_path)?;
+        let reader_file = File::open(&log_path)?;
 
-        let index = Self::build_index(&reader_file)?;
+        let (index, stale_bytes) = Self::build_index(&reader_file)?;
 
         let mut writer = BufWriter::new(writer_file);
         writer.seek(SeekFrom::End(0))?;
 
         Ok(KvStore {
+            path,
             writer,
             reader: BufReader::new(reader_file),
             index,
+            stale_bytes,
         })
     }
 
-    fn build_index(reader_file: &File) -> Result<HashMap<String, CommandPos>> {
+    fn build_index(reader_file: &File) -> Result<(HashMap<String, CommandPos>, u64)> {
         let mut index = HashMap::new();
+        let mut stale_bytes = 0;
         let mut reader = BufReader::new(reader_file);
         let mut pos = reader.seek(SeekFrom::Start(0))?;
         let mut stream = serde_json::Deserializer::from_reader(&mut reader).into_iter::<Command>();
 
         while let Some(cmd) = stream.next() {
             let new_pos = stream.byte_offset() as u64;
+            let len = new_pos - pos;
             match cmd? {
                 Command::Set { key, .. } => {
-                    index.insert(key, CommandPos { pos, len: new_pos - pos });
+                    if let Some(old_cmd) = index.insert(key, CommandPos { pos, len }) {
+                        stale_bytes += old_cmd.len;
+                    }
                 }
                 Command::Remove { key } => {
-                    index.remove(&key);
+                    if let Some(old_cmd) = index.remove(&key) {
+                        stale_bytes += old_cmd.len;
+                    }
+                    stale_bytes += len;
                 }
             }
             pos = new_pos;
         }
-        Ok(index)
+        Ok((index, stale_bytes))
     }
 
     /// Sets the value of a string key to a string.
@@ -98,12 +114,16 @@ impl KvStore {
         serde_json::to_writer(&mut self.writer, &cmd)?;
         self.writer.flush()?;
         let new_pos = self.writer.stream_position()?;
+        let len = new_pos - pos;
 
-        let cmd_pos = CommandPos {
-            pos,
-            len: new_pos - pos,
-        };
-        self.index.insert(key, cmd_pos);
+        if let Some(old_cmd) = self.index.insert(key, CommandPos { pos, len }) {
+            self.stale_bytes += old_cmd.len;
+        }
+
+        if self.stale_bytes > COMPACTION_THRESHOLD {
+            self.compact()?;
+        }
+
         Ok(())
     }
 
@@ -133,13 +153,67 @@ impl KvStore {
     pub fn remove(&mut self, key: String) -> Result<()> {
         if self.index.contains_key(&key) {
             let cmd = Command::Remove { key: key.clone() };
+            let pos = self.writer.stream_position()?;
             serde_json::to_writer(&mut self.writer, &cmd)?;
             self.writer.flush()?;
-            self.index.remove(&key);
+
+            let new_pos = self.writer.stream_position()?;
+            let len = new_pos - pos;
+
+            if let Some(old_cmd) = self.index.remove(&key) {
+                self.stale_bytes += old_cmd.len;
+                self.stale_bytes += len;
+            }
+
+            if self.stale_bytes > COMPACTION_THRESHOLD {
+                self.compact()?;
+            }
+
             Ok(())
         } else {
             Err(KvsError::KeyNotFound)
         }
+    }
+
+    fn compact(&mut self) -> Result<()> {
+        // 1. Create new log file and a new index
+        let compaction_path = self.path.join("wal.log.compact");
+        let mut compaction_writer = BufWriter::new(
+            OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(&compaction_path)?,
+        );
+        let mut new_index = HashMap::new();
+
+        // 2. Write current values to new log and build new index
+        for key in self.index.keys() {
+            let cmd_pos = self.index.get(key).unwrap();
+            self.reader.seek(SeekFrom::Start(cmd_pos.pos))?;
+            let mut cmd_reader = self.reader.get_mut().take(cmd_pos.len);
+
+            let pos = compaction_writer.stream_position()?;
+            std::io::copy(&mut cmd_reader, &mut compaction_writer)?;
+            let new_pos = compaction_writer.stream_position()?;
+            new_index.insert(key.clone(), CommandPos { pos, len: new_pos - pos });
+        }
+        compaction_writer.flush()?;
+
+        // 3. Atomically replace old log with new
+        std::fs::rename(&compaction_path, self.path.join("wal.log"))?;
+
+        // 4. Re-open writer and reader, update index and stale_bytes
+        self.writer = BufWriter::new(
+            OpenOptions::new()
+                .write(true)
+                .open(self.path.join("wal.log"))?,
+        );
+        self.writer.seek(SeekFrom::End(0))?;
+        self.reader = BufReader::new(File::open(self.path.join("wal.log"))?);
+        self.index = new_index;
+        self.stale_bytes = 0;
+
+        Ok(())
     }
 }
 
