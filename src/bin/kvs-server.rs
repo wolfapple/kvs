@@ -1,7 +1,8 @@
 use clap::Parser;
 use env_logger::Env;
-use kvs::{Engine, Result};
+use kvs::{Engine, KvStore, KvsServer, Result};
 use log::info;
+use std::env::current_dir;
 use std::net::SocketAddr;
 
 #[derive(Debug, Parser)]
@@ -34,8 +35,13 @@ fn main() -> Result<()> {
     info!("Listening on {}", args.addr);
 
     match args.engine {
-        Engine::Kvs => {}
-        Engine::Sled => {}
+        Engine::Kvs => {
+            let mut server = KvsServer::new(KvStore::open(current_dir()?)?);
+            server.run(args.addr)?;
+        }
+        Engine::Sled => {
+            unimplemented!();
+        }
     }
     Ok(())
 }

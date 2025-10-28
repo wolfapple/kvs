@@ -1,8 +1,6 @@
 use clap::{Parser, Subcommand};
-use kvs::{KvStore, KvsError, Result};
-use std::env::current_dir;
+use kvs::{KvsClient, Result};
 use std::net::SocketAddr;
-use std::process::exit;
 
 #[derive(Debug, Parser)]
 #[command(version)]
@@ -43,29 +41,20 @@ enum Commands {
 
 fn main() -> Result<()> {
     let args = Args::parse();
+    let mut client = KvsClient::connect(args.addr)?;
     match args.cmd {
         Commands::Set { key, value } => {
-            let mut store = KvStore::open(current_dir()?)?;
-            store.set(key, value)?;
+            client.set(key, value)?;
         }
         Commands::Get { key } => {
-            let mut store = KvStore::open(current_dir()?)?;
-            if let Some(value) = store.get(key)? {
+            if let Some(value) = client.get(key)? {
                 println!("{}", value);
             } else {
                 println!("Key not found");
             }
         }
         Commands::Remove { key } => {
-            let mut store = KvStore::open(current_dir()?)?;
-            match store.remove(key) {
-                Ok(_) => {}
-                Err(KvsError::KeyNotFound) => {
-                    println!("Key not found");
-                    exit(1);
-                }
-                Err(e) => return Err(e)
-            }
+            client.remove(key)?;
         }
     }
     Ok(())

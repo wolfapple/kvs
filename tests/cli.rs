@@ -1,3 +1,4 @@
+use assert_cmd::cargo_bin;
 use assert_cmd::prelude::*;
 use predicates::str::{contains, is_empty};
 use std::fs::{self, File};
@@ -11,36 +12,32 @@ use tempfile::TempDir;
 #[test]
 fn client_cli_no_args() {
     let temp_dir = TempDir::new().unwrap();
-    let mut cmd = Command::cargo_bin("kvs-client").unwrap();
+    let mut cmd = Command::new(cargo_bin!("kvs-client"));
     cmd.current_dir(&temp_dir).assert().failure();
 }
 
 #[test]
 fn client_cli_invalid_get() {
     let temp_dir = TempDir::new().unwrap();
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get", "extra", "field"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get", "key", "--addr", "invalid-addr"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get", "key", "--unknown-flag"])
         .current_dir(&temp_dir)
         .assert()
@@ -50,36 +47,31 @@ fn client_cli_invalid_get() {
 #[test]
 fn client_cli_invalid_set() {
     let temp_dir = TempDir::new().unwrap();
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["set"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["set", "missing_field"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["set", "key", "value", "extra_field"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["set", "key", "value", "--addr", "invalid-addr"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get", "key", "--unknown-flag"])
         .current_dir(&temp_dir)
         .assert()
@@ -89,29 +81,25 @@ fn client_cli_invalid_set() {
 #[test]
 fn client_cli_invalid_rm() {
     let temp_dir = TempDir::new().unwrap();
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["rm"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["rm", "extra", "field"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["rm", "key", "--addr", "invalid-addr"])
         .current_dir(&temp_dir)
         .assert()
         .failure();
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["rm", "key", "--unknown-flag"])
         .current_dir(&temp_dir)
         .assert()
@@ -121,8 +109,7 @@ fn client_cli_invalid_rm() {
 #[test]
 fn client_cli_invalid_subcommand() {
     let temp_dir = TempDir::new().unwrap();
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["unknown"])
         .current_dir(&temp_dir)
         .assert()
@@ -133,7 +120,7 @@ fn client_cli_invalid_subcommand() {
 #[test]
 fn client_cli_version() {
     let temp_dir = TempDir::new().unwrap();
-    let mut cmd = Command::cargo_bin("kvs-client").unwrap();
+    let mut cmd = Command::new(cargo_bin!("kvs-client"));
     cmd.args(&["-V"])
         .current_dir(&temp_dir)
         .assert()
@@ -144,7 +131,7 @@ fn client_cli_version() {
 #[test]
 fn server_cli_version() {
     let temp_dir = TempDir::new().unwrap();
-    let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+    let mut cmd = Command::new(cargo_bin!("kvs-server"));
     cmd.args(&["-V"])
         .current_dir(&temp_dir)
         .assert()
@@ -155,7 +142,7 @@ fn server_cli_version() {
 fn cli_log_configuration() {
     let temp_dir = TempDir::new().unwrap();
     let stderr_path = temp_dir.path().join("stderr");
-    let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+    let mut cmd = Command::new(cargo_bin!("kvs-server"));
     let mut child = cmd
         .args(&["--engine", "kvs", "--addr", "127.0.0.1:4001"])
         .current_dir(&temp_dir)
@@ -176,7 +163,7 @@ fn cli_wrong_engine() {
     // sled first, kvs second
     {
         let temp_dir = TempDir::new().unwrap();
-        let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+        let mut cmd = Command::new(cargo_bin!("kvs-server"));
         let mut child = cmd
             .args(&["--engine", "sled", "--addr", "127.0.0.1:4002"])
             .current_dir(&temp_dir)
@@ -185,7 +172,7 @@ fn cli_wrong_engine() {
         thread::sleep(Duration::from_secs(1));
         child.kill().expect("server exited before killed");
 
-        let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+        let mut cmd = Command::new(cargo_bin!("kvs-server"));
         cmd.args(&["--engine", "kvs", "--addr", "127.0.0.1:4003"])
             .current_dir(&temp_dir)
             .assert()
@@ -195,7 +182,7 @@ fn cli_wrong_engine() {
     // kvs first, sled second
     {
         let temp_dir = TempDir::new().unwrap();
-        let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+        let mut cmd = Command::new(cargo_bin!("kvs-server"));
         let mut child = cmd
             .args(&["--engine", "kvs", "--addr", "127.0.0.1:4002"])
             .current_dir(&temp_dir)
@@ -204,7 +191,7 @@ fn cli_wrong_engine() {
         thread::sleep(Duration::from_secs(1));
         child.kill().expect("server exited before killed");
 
-        let mut cmd = Command::cargo_bin("kvs-server").unwrap();
+        let mut cmd = Command::new(cargo_bin!("kvs-server"));
         cmd.args(&["--engine", "sled", "--addr", "127.0.0.1:4003"])
             .current_dir(&temp_dir)
             .assert()
@@ -215,7 +202,7 @@ fn cli_wrong_engine() {
 fn cli_access_server(engine: &str, addr: &str) {
     let (sender, receiver) = mpsc::sync_channel(0);
     let temp_dir = TempDir::new().unwrap();
-    let mut server = Command::cargo_bin("kvs-server").unwrap();
+    let mut server = Command::new(cargo_bin!("kvs-server"));
     let mut child = server
         .args(&["--engine", engine, "--addr", addr])
         .current_dir(&temp_dir)
@@ -227,64 +214,56 @@ fn cli_access_server(engine: &str, addr: &str) {
     });
     thread::sleep(Duration::from_secs(1));
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["set", "key1", "value1", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
         .success()
         .stdout(is_empty());
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get", "key1", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
         .success()
         .stdout("value1\n");
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["set", "key1", "value2", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
         .success()
         .stdout(is_empty());
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get", "key1", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
         .success()
         .stdout("value2\n");
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get", "key2", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
         .success()
         .stdout(contains("Key not found"));
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["rm", "key2", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
         .failure()
         .stderr(contains("Key not found"));
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["set", "key2", "value3", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
         .success()
         .stdout(is_empty());
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["rm", "key1", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
@@ -296,7 +275,7 @@ fn cli_access_server(engine: &str, addr: &str) {
 
     // Reopen and check value
     let (sender, receiver) = mpsc::sync_channel(0);
-    let mut server = Command::cargo_bin("kvs-server").unwrap();
+    let mut server = Command::new(cargo_bin!("kvs-server"));
     let mut child = server
         .args(&["--engine", engine, "--addr", addr])
         .current_dir(&temp_dir)
@@ -308,15 +287,13 @@ fn cli_access_server(engine: &str, addr: &str) {
     });
     thread::sleep(Duration::from_secs(1));
 
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get", "key2", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
         .success()
         .stdout(contains("value3"));
-    Command::cargo_bin("kvs-client")
-        .unwrap()
+    Command::new(cargo_bin!("kvs-client"))
         .args(&["get", "key1", "--addr", addr])
         .current_dir(&temp_dir)
         .assert()
