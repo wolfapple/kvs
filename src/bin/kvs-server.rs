@@ -1,5 +1,7 @@
 use clap::Parser;
+use env_logger::Env;
 use kvs::Result;
+use log::info;
 use std::net::SocketAddr;
 
 #[derive(Debug, Parser)]
@@ -24,7 +26,10 @@ struct Args {
 }
 
 fn main() -> Result<()> {
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let args = Args::parse();
-    println!("Starting server on {}", args.addr);
+    info!("kvs-server {}", env!("CARGO_PKG_VERSION"));
+    info!("Storage engine: {}", args.engine);
+    info!("Listening on {}", args.addr);
     Ok(())
 }
