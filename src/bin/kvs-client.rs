@@ -1,20 +1,44 @@
 use clap::{Parser, Subcommand};
 use kvs::{KvStore, KvsError, Result};
 use std::env::current_dir;
+use std::net::SocketAddr;
 use std::process::exit;
 
 #[derive(Debug, Parser)]
-#[clap(version)]
+#[command(version)]
 struct Args {
     #[command(subcommand)]
     cmd: Commands,
+    #[arg(
+        short,
+        long,
+        global = true,
+        name = "IP:PORT",
+        help = "Sets the server address",
+        default_value = "127.0.0.1:4000",
+    )]
+    addr: SocketAddr,
 }
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    Set { key: String, value: String },
-    Get { key: String },
-    Rm { key: String },
+    #[command(about = "Set the value of a string key to a string", name = "set")]
+    Set {
+        #[arg(name = "KEY", help = "A string key")]
+        key: String,
+        #[arg(name = "VALUE", help = "The string value of the key")]
+        value: String,
+    },
+    #[command(about = "Get the string value of a given string key", name = "get")]
+    Get {
+        #[arg(name = "KEY", help = "A string key")]
+        key: String
+    },
+    #[command(about = "Remove a given string key", name = "rm")]
+    Remove {
+        #[arg(name = "KEY", help = "A string key")]
+        key: String
+    },
 }
 
 fn main() -> Result<()> {
@@ -32,7 +56,7 @@ fn main() -> Result<()> {
                 println!("Key not found");
             }
         }
-        Commands::Rm { key } => {
+        Commands::Remove { key } => {
             let mut store = KvStore::open(current_dir()?)?;
             match store.remove(key) {
                 Ok(_) => {}
