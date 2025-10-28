@@ -217,6 +217,20 @@ impl KvStore {
     }
 }
 
+impl super::KvsEngine for KvStore {
+    fn set(&mut self, key: String, value: String) -> Result<()> {
+        KvStore::set(self, key, value)
+    }
+
+    fn get(&mut self, key: String) -> Result<Option<String>> {
+        KvStore::get(self, key)
+    }
+
+    fn remove(&mut self, key: String) -> Result<()> {
+        KvStore::remove(self, key)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 enum Command {
     Set { key: String, value: String },

@@ -1,0 +1,41 @@
+use crate::Result;
+use clap::ValueEnum;
+use std::fmt;
+
+mod kvs;
+pub use kvs::KvStore;
+
+/// Trait for a key value storage engine.
+pub trait KvsEngine {
+    /// Sets the value of a string key to a string.
+    ///
+    /// If the key already exists, the previous value will be overwritten.
+    fn set(&mut self, key: String, value: String) -> Result<()>;
+
+    /// Gets the string value of a given string key.
+    ///
+    /// Returns `None` if the given key does not exist.
+    fn get(&mut self, key: String) -> Result<Option<String>>;
+
+    /// Removes a given key.
+    ///
+    /// # Errors
+    ///
+    /// It returns `KvsError::KeyNotFound` if the given key is not found.
+    fn remove(&mut self, key: String) -> Result<()>;
+}
+
+#[derive(ValueEnum, Clone, Debug, PartialEq, Eq)]
+pub enum Engine {
+    Kvs,
+    Sled,
+}
+
+impl fmt::Display for Engine {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Engine::Kvs => write!(f, "kvs"),
+            Engine::Sled => write!(f, "sled"),
+        }
+    }
+}

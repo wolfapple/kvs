@@ -1,6 +1,6 @@
 use clap::Parser;
 use env_logger::Env;
-use kvs::Result;
+use kvs::{Engine, Result};
 use log::info;
 use std::net::SocketAddr;
 
@@ -18,11 +18,12 @@ struct Args {
     #[arg(
         short,
         long,
+        value_enum,
+        default_value_t = Engine::Kvs,
         name = "ENGINE-NAME",
-        help = "kvs | sled",
-        default_value = "kvs"
+        help = "Sets the storage engine"
     )]
-    engine: String,
+    engine: Engine,
 }
 
 fn main() -> Result<()> {
@@ -31,5 +32,10 @@ fn main() -> Result<()> {
     info!("kvs-server {}", env!("CARGO_PKG_VERSION"));
     info!("Storage engine: {}", args.engine);
     info!("Listening on {}", args.addr);
+
+    match args.engine {
+        Engine::Kvs => {}
+        Engine::Sled => {}
+    }
     Ok(())
 }
