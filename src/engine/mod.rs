@@ -5,6 +5,8 @@ use std::fmt;
 
 mod kvs;
 pub use kvs::KvStore;
+mod sled;
+pub use sled::SledKvsEngine;
 
 /// Trait for a key value storage engine.
 pub trait KvsEngine {

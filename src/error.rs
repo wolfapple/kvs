@@ -1,4 +1,5 @@
 use std::io;
+use std::string::FromUtf8Error;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -7,6 +8,10 @@ pub enum KvsError {
     Io(#[from] io::Error),
     #[error("Serialization error: {0}")]
     Serde(#[from] serde_json::Error),
+    #[error("Sled error: {0}")]
+    Sled(#[from] sled::Error),
+    #[error("UTF-8 conversion error: {0}")]
+    Utf8(#[from] FromUtf8Error),
     #[error("Key not found")]
     KeyNotFound,
     #[error("Unexpected command type")]

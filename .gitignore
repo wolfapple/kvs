@@ -24,3 +24,7 @@ target
 .engine
 # KvStore Write-Ahead Log
 wal.log
+# Sled
+blobs
+db
+conf

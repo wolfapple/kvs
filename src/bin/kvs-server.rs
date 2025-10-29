@@ -1,6 +1,6 @@
 use clap::Parser;
 use env_logger::Env;
-use kvs::{Engine, KvStore, KvsError, KvsServer, Result};
+use kvs::{Engine, KvStore, KvsError, KvsServer, Result, SledKvsEngine};
 use log::info;
 use std::env::current_dir;
 use std::fs::File;
@@ -42,7 +42,8 @@ fn main() -> Result<()> {
             server.run(args.addr)?;
         }
         Engine::Sled => {
-            unimplemented!();
+            let mut server = KvsServer::new(SledKvsEngine::open(current_dir()?)?);
+            server.run(args.addr)?;
         }
     }
     Ok(())

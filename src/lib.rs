@@ -1,5 +1,5 @@
 pub use client::KvsClient;
-pub use engine::{Engine, KvStore, KvsEngine};
+pub use engine::{Engine, KvStore, KvsEngine, SledKvsEngine};
 pub use error::{KvsError, Result};
 pub use protocol::{Request, Response};
 pub use server::KvsServer;
