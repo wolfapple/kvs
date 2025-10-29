@@ -11,6 +11,8 @@ pub enum KvsError {
     KeyNotFound,
     #[error("Unexpected command type")]
     UnexpectedCommandType,
+    #[error("Engine mismatch")]
+    EngineMismatch,
     #[error("{0}")]
     StringError(String),
 }

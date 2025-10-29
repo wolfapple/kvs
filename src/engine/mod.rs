@@ -1,5 +1,6 @@
 use crate::Result;
 use clap::ValueEnum;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 mod kvs;
@@ -25,7 +26,7 @@ pub trait KvsEngine {
     fn remove(&mut self, key: String) -> Result<()>;
 }
 
-#[derive(ValueEnum, Clone, Debug, PartialEq, Eq)]
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Engine {
     Kvs,
     Sled,
