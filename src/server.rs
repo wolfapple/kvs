@@ -1,7 +1,7 @@
 use crate::engine::KvsEngine;
 use crate::protocol::{Request, Response};
 use crate::Result;
-use log::error;
+use log::{debug, error};
 use std::io::{BufReader, BufWriter, Write};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 
@@ -36,6 +36,7 @@ impl<E: KvsEngine> KvsServer<E> {
 
         for req in req_stream {
             let req = req?;
+            debug!("Receive request from {}: {:?}", stream.peer_addr()?, req);
             let resp = match req {
                 Request::Get { key } => match self.engine.get(key) {
                     Ok(value) => Response::Ok(value),
@@ -52,6 +53,7 @@ impl<E: KvsEngine> KvsServer<E> {
             };
             serde_json::to_writer(&mut writer, &resp)?;
             writer.flush()?;
+            debug!("Response sent to {}: {:?}", stream.peer_addr()?, resp);
         }
         Ok(())
     }

@@ -1,19 +1,22 @@
 use crate::protocol::{Request, Response};
-use crate::Result;
+use crate::{KvsError, Result};
+use serde::Deserialize;
+use serde_json::de::{Deserializer, IoRead};
 use std::io::{BufReader, BufWriter, Write};
 use std::net::{TcpStream, ToSocketAddrs};
 
 pub struct KvsClient {
-    reader: BufReader<TcpStream>,
+    reader: Deserializer<IoRead<BufReader<TcpStream>>>,
     writer: BufWriter<TcpStream>,
 }
 
 impl KvsClient {
     pub fn connect<A: ToSocketAddrs>(addr: A) -> Result<Self> {
-        let stream = TcpStream::connect(addr)?;
+        let reader = TcpStream::connect(addr)?;
+        let writer = reader.try_clone()?;
         Ok(KvsClient {
-            reader: BufReader::new(stream.try_clone()?),
-            writer: BufWriter::new(stream),
+            reader: Deserializer::from_reader(BufReader::new(reader)),
+            writer: BufWriter::new(writer),
         })
     }
 
@@ -21,10 +24,10 @@ impl KvsClient {
         let req = Request::Get { key };
         serde_json::to_writer(&mut self.writer, &req)?;
         self.writer.flush()?;
-        let resp = serde_json::from_reader(&mut self.reader)?;
+        let resp = Response::deserialize(&mut self.reader)?;
         match resp {
             Response::Ok(value) => Ok(value),
-            Response::Err(msg) => Err(crate::KvsError::StringError(msg)),
+            Response::Err(msg) => Err(KvsError::StringError(msg)),
         }
     }
 
@@ -32,10 +35,10 @@ impl KvsClient {
         let req = Request::Set { key, value };
         serde_json::to_writer(&mut self.writer, &req)?;
         self.writer.flush()?;
-        let resp = serde_json::from_reader(&mut self.reader)?;
+        let resp = Response::deserialize(&mut self.reader)?;
         match resp {
             Response::Ok(_) => Ok(()),
-            Response::Err(msg) => Err(crate::KvsError::StringError(msg)),
+            Response::Err(msg) => Err(KvsError::StringError(msg)),
         }
     }
 
@@ -43,10 +46,10 @@ impl KvsClient {
         let req = Request::Remove { key };
         serde_json::to_writer(&mut self.writer, &req)?;
         self.writer.flush()?;
-        let resp = serde_json::from_reader(&mut self.reader)?;
+        let resp = Response::deserialize(&mut self.reader)?;
         match resp {
             Response::Ok(_) => Ok(()),
-            Response::Err(msg) => Err(crate::KvsError::StringError(msg)),
+            Response::Err(msg) => Err(KvsError::StringError(msg)),
         }
     }
 }
