@@ -460,8 +460,10 @@ dependencies = [
  "assert_cmd",
  "clap",
  "criterion",
+ "crossbeam-utils",
  "env_logger",
  "log",
+ "panic-control",
  "predicates",
  "rand",
  "serde",
@@ -537,6 +539,12 @@ name = "oorandom"
 version = "11.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
+
+[[package]]
+name = "panic-control"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "159973aebc43b4640619042b3bf160e3b6348000a949e37c0806ae6acc79d6c7"
 
 [[package]]
 name = "parking_lot"
