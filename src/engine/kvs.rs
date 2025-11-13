@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 const COMPACTION_THRESHOLD: u64 = 1024 * 1024; // 1MB
 
@@ -27,7 +28,10 @@ const COMPACTION_THRESHOLD: u64 = 1024 * 1024; // 1MB
 ///     Ok(())
 /// }
 /// ```
-pub struct KvStore {
+#[derive(Clone)]
+pub struct KvStore(Arc<Mutex<KvStoreInner>>);
+
+pub struct KvStoreInner {
     path: PathBuf,
     writer: BufWriter<File>,
     reader: BufReader<File>,
@@ -41,37 +45,7 @@ struct CommandPos {
     len: u64,
 }
 
-impl KvStore {
-    /// Opens a `KvStore` with the given path.
-    ///
-    /// This will create a new directory if the given one does not exist.
-    /// It will also create a `wal.log` file if it does not exist.
-    /// The index will be built from the log file.
-    pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
-        let path = path.into();
-        std::fs::create_dir_all(&path)?;
-        let log_path = path.join("wal.log");
-
-        let writer_file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .open(&log_path)?;
-        let reader_file = File::open(&log_path)?;
-
-        let (index, stale_bytes) = Self::build_index(&reader_file)?;
-
-        let mut writer = BufWriter::new(writer_file);
-        writer.seek(SeekFrom::End(0))?;
-
-        Ok(KvStore {
-            path,
-            writer,
-            reader: BufReader::new(reader_file),
-            index,
-            stale_bytes,
-        })
-    }
-
+impl KvStoreInner {
     fn build_index(reader_file: &File) -> Result<(HashMap<String, CommandPos>, u64)> {
         let mut index = HashMap::new();
         let mut stale_bytes = 0;
@@ -217,16 +191,68 @@ impl KvStore {
     }
 }
 
+impl KvStore {
+    /// Opens a `KvStore` with the given path.
+    ///
+    /// This will create a new directory if the given one does not exist.
+    /// It will also create a `wal.log` file if it does not exist.
+    /// The index will be built from the log file.
+    pub fn open(path: impl Into<PathBuf>) -> Result<KvStore> {
+        let path = path.into();
+        std::fs::create_dir_all(&path)?;
+        let log_path = path.join("wal.log");
+
+        let writer_file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(&log_path)?;
+        let reader_file = File::open(&log_path)?;
+
+        let (index, stale_bytes) = KvStoreInner::build_index(&reader_file)?;
+
+        let mut writer = BufWriter::new(writer_file);
+        writer.seek(SeekFrom::End(0))?;
+
+        let inner = KvStoreInner {
+            path,
+            writer,
+            reader: BufReader::new(reader_file),
+            index,
+            stale_bytes,
+        };
+
+        Ok(KvStore(Arc::new(Mutex::new(inner))))
+    }
+
+    /// Sets the value of a string key to a string.
+    pub fn set(&self, key: String, value: String) -> Result<()> {
+        let mut inner = self.0.lock().unwrap();
+        inner.set(key, value)
+    }
+
+    /// Gets the string value of a given string key.
+    pub fn get(&self, key: String) -> Result<Option<String>> {
+        let mut inner = self.0.lock().unwrap();
+        inner.get(key)
+    }
+
+    /// Remove a given key.
+    pub fn remove(&self, key: String) -> Result<()> {
+        let mut inner = self.0.lock().unwrap();
+        inner.remove(key)
+    }
+}
+
 impl super::KvsEngine for KvStore {
-    fn set(&mut self, key: String, value: String) -> Result<()> {
+    fn set(&self, key: String, value: String) -> Result<()> {
         KvStore::set(self, key, value)
     }
 
-    fn get(&mut self, key: String) -> Result<Option<String>> {
+    fn get(&self, key: String) -> Result<Option<String>> {
         KvStore::get(self, key)
     }
 
-    fn remove(&mut self, key: String) -> Result<()> {
+    fn remove(&self, key: String) -> Result<()> {
         KvStore::remove(self, key)
     }
 }
