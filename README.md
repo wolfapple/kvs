@@ -15,6 +15,7 @@ This project is developed in several stages:
 5.  **Pluggable Storage Engines**: The server can be configured to use different storage engines. This project provides two engines:
     *   `kvs`: The original log-structured file-based storage engine.
     *   `sled`: An engine based on the `sled` embedded database.
+6.  **Concurrent Server**: The server is improved to handle requests from multiple clients concurrently using a thread pool. Each connection is handled in a separate thread.
 
 ## Project Specification
 
@@ -48,8 +49,9 @@ The `kvs-client` executable is the command-line client to interact with the serv
 
 The `kvs` library provides the building blocks for the key-value store.
 
-*   `KvsEngine` trait: An interface for a key-value storage engine with `set`, `get`, and `remove` methods.
+*   `KvsEngine` trait: An interface for a key-value storage engine, designed to be safely shared across multiple threads.
 *   `KvStore`: A log-structured storage engine implementing the `KvsEngine` trait.
 *   `SledKvsEngine`: A `sled`-based storage engine implementing the `KvsEngine` trait.
 *   `KvsServer`: A server that can run with any type that implements `KvsEngine`.
 *   `KvsClient`: A client for communicating with the `KvsServer`.
+*   `ThreadPool` trait: An interface for the server's concurrency model.

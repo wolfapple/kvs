@@ -5,6 +5,7 @@ use log::info;
 use std::env::current_dir;
 use std::fs::File;
 use std::net::SocketAddr;
+use kvs::thread_pool::{NaiveThreadPool, ThreadPool};
 
 #[derive(Debug, Parser)]
 #[command(version)]
@@ -31,6 +32,7 @@ fn main() -> Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let args = Args::parse();
     let engine = get_engine(args.engine)?;
+    let pool = NaiveThreadPool::new(4)?;
 
     info!("kvs-server {}", env!("CARGO_PKG_VERSION"));
     info!("Storage engine: {}", engine);
@@ -38,11 +40,11 @@ fn main() -> Result<()> {
 
     match engine {
         Engine::Kvs => {
-            let mut server = KvsServer::new(KvStore::open(current_dir()?)?);
+            let mut server = KvsServer::new(KvStore::open(current_dir()?)?, pool);
             server.run(args.addr)?;
         }
         Engine::Sled => {
-            let mut server = KvsServer::new(SledKvsEngine::open(current_dir()?)?);
+            let mut server = KvsServer::new(SledKvsEngine::open(current_dir()?)?, pool);
             server.run(args.addr)?;
         }
     }
