@@ -1,7 +1,10 @@
 use crate::Result;
 
 mod naive;
+mod shared_queue;
+
 pub use naive::NaiveThreadPool;
+pub use shared_queue::SharedQueueThreadPool;
 
 /// Trait for a thread pool.
 pub trait ThreadPool {
