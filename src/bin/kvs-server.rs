@@ -5,7 +5,7 @@ use log::info;
 use std::env::current_dir;
 use std::fs::File;
 use std::net::SocketAddr;
-use kvs::thread_pool::{NaiveThreadPool, ThreadPool};
+use kvs::thread_pool::{RayonThreadPool, ThreadPool};
 
 #[derive(Debug, Parser)]
 #[command(version)]
@@ -32,7 +32,7 @@ fn main() -> Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let args = Args::parse();
     let engine = get_engine(args.engine)?;
-    let pool = NaiveThreadPool::new(4)?;
+    let pool = RayonThreadPool::new(num_cpus::get() as u32)?;
 
     info!("kvs-server {}", env!("CARGO_PKG_VERSION"));
     info!("Storage engine: {}", engine);

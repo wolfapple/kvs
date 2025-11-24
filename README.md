@@ -15,7 +15,7 @@ This project is developed in several stages:
 5.  **Pluggable Storage Engines**: The server can be configured to use different storage engines. This project provides two engines:
     *   `kvs`: The original log-structured file-based storage engine.
     *   `sled`: An engine based on the `sled` embedded database.
-6.  **Concurrent Server**: The server is improved to handle requests from multiple clients concurrently using a thread pool. Each connection is handled in a separate thread.
+6.  **Concurrent Server and Pluggable Thread Pools**: The server is improved to handle requests from multiple clients concurrently using a thread pool. Each connection is handled in a separate thread. This also introduces pluggable thread pools, allowing different concurrency models to be used and compared.
 
 ## Project Specification
 
@@ -54,4 +54,7 @@ The `kvs` library provides the building blocks for the key-value store.
 *   `SledKvsEngine`: A `sled`-based storage engine implementing the `KvsEngine` trait.
 *   `KvsServer`: A server that can run with any type that implements `KvsEngine`.
 *   `KvsClient`: A client for communicating with the `KvsServer`.
-*   `ThreadPool` trait: An interface for the server's concurrency model.
+*   `ThreadPool` trait: An interface for the server's concurrency model, allowing for different implementations.
+    *   `NaiveThreadPool`: A basic thread pool implementation.
+    *   `SharedQueueThreadPool`: A thread pool using a shared queue for task distribution.
+    *   `RayonThreadPool`: An implementation based on the `rayon` crate, utilizing a work-stealing algorithm for efficient task management.

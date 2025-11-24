@@ -1,6 +1,7 @@
 use super::ThreadPool;
 use crate::Result;
-use crossbeam_channel::{self, Sender, Receiver};
+use crossbeam_channel::{self, Receiver, Sender};
+use log::{debug, error};
 use std::panic;
 use std::thread;
 
@@ -32,10 +33,14 @@ impl Worker {
 
                 match message {
                     Ok(Message::NewJob(job)) => {
+                        debug!("Worker {} got a job; executing.", id);
                         // Catch panics from the job to prevent the worker thread from crashing.
-                        let _ = panic::catch_unwind(panic::AssertUnwindSafe(job));
+                        if let Err(e) = panic::catch_unwind(panic::AssertUnwindSafe(job)) {
+                            error!("Worker {} panicked: {:?}", id, e);
+                        }
                     }
                     Ok(Message::Terminate) | Err(_) => {
+                        debug!("Worker {} was told to terminate.", id);
                         break;
                     }
                 }
@@ -82,12 +87,14 @@ impl ThreadPool for SharedQueueThreadPool {
 /// each worker thread to finish its execution.
 impl Drop for SharedQueueThreadPool {
     fn drop(&mut self) {
-        for _ in &mut self.workers {
+        debug!("Sending terminate message to all workers.");
+        for _ in &self.workers {
             self.sender.send(Message::Terminate).ok();
         }
 
         for worker in &mut self.workers {
             if let Some(thread) = worker.thread.take() {
+                debug!("Shutting down worker {}", worker.id);
                 thread.join().unwrap();
             }
         }
