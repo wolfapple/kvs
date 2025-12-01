@@ -26,3 +26,7 @@ sled = "0.34.7"
 crossbeam-channel = "0.5.15"
 rayon = "1.11.0"
 num_cpus = "1.17.0"
+
+[[bench]]
+name = "engine_bench"
+harness = false
